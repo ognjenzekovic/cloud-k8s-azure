@@ -69,7 +69,7 @@ function OrdersPage() {
                             {order.status === 'COMPLETED' && order.invoiceUrl && (
                                 <a
                                     // href={order.invoiceUrl}
-                                    href={`http://localhost:8082/api/orders/${order.id}/invoice`}
+                                    href={`/api/orders/${order.id}/invoice`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="download-btn"

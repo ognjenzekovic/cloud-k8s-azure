@@ -3,6 +3,7 @@ package com.cloud.order.controller;
 import com.cloud.order.dto.CreateOrderRequest;
 import com.cloud.order.model.Order;
 import com.cloud.order.service.OrderService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.azure.storage.blob.BlobClient;
@@ -14,6 +15,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
+
+    @Value("${azure.storage.connection-string}")
+    private String blobConnectionString;
 
     private final OrderService orderService;
 
@@ -30,10 +34,8 @@ public class OrderController {
         }
 
         try {
-            String connectionString = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1";
-
             BlobClient blobClient = new BlobClientBuilder()
-                    .connectionString(connectionString)
+                    .connectionString(blobConnectionString)
                     .containerName("invoices")
                     .blobName("invoice-order-" + id + ".pdf")
                     .buildClient();

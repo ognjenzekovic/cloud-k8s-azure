@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: catalog-service
-          image: cloudappacr2026.azurecr.io/catalog-service:v1
+          image: cloudappacr2026.azurecr.io/catalog-service:v3
           ports:
             - containerPort: 8081
           env:

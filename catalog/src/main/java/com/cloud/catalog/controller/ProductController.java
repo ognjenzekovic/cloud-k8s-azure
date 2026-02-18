@@ -37,4 +37,14 @@ public class ProductController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PutMapping("/{id}")
+    public Product updateProduct(@PathVariable Long id, @RequestBody Product updated) {
+        Product product = productService.getProductById(id);
+        if (updated.getName() != null) product.setName(updated.getName());
+        if (updated.getImageUrl() != null) product.setImageUrl(updated.getImageUrl());
+        if (updated.getPrice() != null) product.setPrice(updated.getPrice());
+        if (updated.getStockQuantity() != null) product.setStockQuantity(updated.getStockQuantity());
+        return productService.save(product);
+    }
 }

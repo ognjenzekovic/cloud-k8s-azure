@@ -9,4 +9,5 @@ public interface ProductService {
     List<Product> getAllProducts();
     Product getProductById(Long id);
     void reduceStock(Map<Long, Integer> items);
+    Product save(Product product);
 }

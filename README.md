@@ -1,5 +1,24 @@
-# cloud-k8s-azure
 Project covers basics of microservices using Kubernetes and Azure, along with CI/DC for git, in education purposes of subject Cloud Computing, FTN Novi Sad
 
-##Azurite testing
-- docker run --rm -it -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+# Cloud Orders - Projektni zadatak
+
+**Predmet:** Računarstvo u oblaku
+
+**Student:** Ime Prezime
+**Broj indeksa:** XX/XXXX
+
+## Arhitektura
+
+- **Catalog Service** - Spring Boot, upravljanje proizvodima
+- **Order Service** - Spring Boot, kreiranje narudžbina
+- **Invoice Worker** - Spring Boot, asinhrono generisanje PDF faktura
+- **Frontend** - React
+- **Baza** - PostgreSQL (StatefulSet na AKS)
+
+## Deploy
+
+- AKS: catalog-service, order-service, frontend, PostgreSQL
+- Azure Container Apps: invoice-worker
+- Azure Storage: Queue (asinhrona komunikacija), Blob (PDF fakture)
+- Azure Key Vault: centralizovano čuvanje tajni (CSI Driver)
+- CI/CD: GitHub Actions (test → build → deploy → integracioni testovi + rollback)

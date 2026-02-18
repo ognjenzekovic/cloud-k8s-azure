@@ -51,19 +51,19 @@ jobs:
 
       - name: Build and push catalog-service
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:latest ./catalog-service
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:latest ./catalog
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:${{ github.sha }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:latest
 
       - name: Build and push order-service
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/order-service:latest ./order-service
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/order-service:latest ./order
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/order-service:latest
 
       - name: Build and push invoice-worker
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:latest ./invoice-worker
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:latest ./invoice
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:${{ github.sha }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:latest
 

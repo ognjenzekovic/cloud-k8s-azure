@@ -1,0 +1,191 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Test catalog-service
+        working-directory: ./catalog
+        run: mvn test
+
+      - name: Test order-service
+        working-directory: ./order
+        run: mvn test
+
+      - name: Build catalog-service
+        working-directory: ./catalog
+        run: mvn package -DskipTests
+
+      - name: Build order-service
+        working-directory: ./order
+        run: mvn package -DskipTests
+
+      - name: Build invoice-worker
+        working-directory: ./invoice
+        run: mvn package -DskipTests
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push catalog-service
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:latest ./catalog-service
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:latest
+
+      - name: Build and push order-service
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/order-service:latest ./order-service
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/order-service:latest
+
+      - name: Build and push invoice-worker
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:latest ./invoice-worker
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:latest
+
+      - name: Build and push frontend
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/frontend:latest ./frontend
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/frontend:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        run: |
+          az login -u ${{ secrets.AZURE_USERNAME }} -p ${{ secrets.AZURE_PASSWORD }}
+          az account set --subscription 46ed9adf-ad1e-4986-8e5a-f39fc07ca3d8
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+
+      - name: Deploy to AKS - Update images
+        run: |
+          kubectl set image deployment/catalog-service catalog-service=${{ secrets.ACR_LOGIN_SERVER }}/catalog-service:${{ github.sha }} -n cloud-app
+          kubectl set image deployment/order-service order-service=${{ secrets.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }} -n cloud-app
+          kubectl set image deployment/frontend frontend=${{ secrets.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} -n cloud-app
+
+      - name: Wait for rollouts
+        run: |
+          kubectl rollout status deployment/catalog-service -n cloud-app --timeout=120s
+          kubectl rollout status deployment/order-service -n cloud-app --timeout=120s
+          kubectl rollout status deployment/frontend -n cloud-app --timeout=120s
+
+      - name: Verify pods are ready
+        run: |
+          kubectl get pods -n cloud-app
+          READY_PODS=$(kubectl get pods -n cloud-app --field-selector=status.phase=Running --no-headers | wc -l)
+          TOTAL_PODS=$(kubectl get pods -n cloud-app --no-headers | wc -l)
+          echo "Running pods: $READY_PODS / $TOTAL_PODS"
+          if [ "$READY_PODS" -lt 3 ]; then
+            echo "Not all pods are running!"
+            exit 1
+          fi
+
+      - name: Deploy invoice-worker to Container Apps
+        run: |
+          az containerapp update \
+            --name invoice-worker \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/invoice-worker:${{ github.sha }}
+
+      - name: Verify Container App revision
+        run: |
+          az containerapp revision list \
+            --name invoice-worker \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --output table
+
+  integration-tests:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for services to stabilize
+        run: sleep 30
+
+      - name: Test - Get products endpoint
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.INGRESS_IP }}/api/products)
+          echo "Products endpoint status: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "FAILED: Products endpoint returned $RESPONSE"
+            exit 1
+          fi
+          echo "PASSED: Products endpoint is healthy"
+
+      - name: Test - Create order and verify
+        run: |
+          # Create order
+          ORDER_RESPONSE=$(curl -s -X POST http://${{ secrets.INGRESS_IP }}/api/orders \
+            -H "Content-Type: application/json" \
+            -d '{"customerId":"CI-TEST","customerName":"CI Test User","items":[{"productId":1,"quantity":1}]}')
+          
+          echo "Order response: $ORDER_RESPONSE"
+          
+          ORDER_ID=$(echo $ORDER_RESPONSE | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          
+          if [ -z "$ORDER_ID" ]; then
+            echo "FAILED: Could not create order"
+            exit 1
+          fi
+          
+          echo "PASSED: Order created with ID $ORDER_ID"
+          
+          # Verify order exists
+          GET_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.INGRESS_IP }}/api/orders/$ORDER_ID)
+          
+          if [ "$GET_RESPONSE" != "200" ]; then
+            echo "FAILED: Could not retrieve order $ORDER_ID"
+            exit 1
+          fi
+          
+          echo "PASSED: Order $ORDER_ID verified"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          az login -u ${{ secrets.AZURE_USERNAME }} -p ${{ secrets.AZURE_PASSWORD }}
+          az account set --subscription 46ed9adf-ad1e-4986-8e5a-f39fc07ca3d8
+          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+          
+          echo "Rolling back deployments..."
+          kubectl rollout undo deployment/catalog-service -n cloud-app
+          kubectl rollout undo deployment/order-service -n cloud-app
+          kubectl rollout undo deployment/frontend -n cloud-app
+          
+          kubectl rollout status deployment/catalog-service -n cloud-app --timeout=120s
+          kubectl rollout status deployment/order-service -n cloud-app --timeout=120s
+          kubectl rollout status deployment/frontend -n cloud-app --timeout=120s
+          
+          echo "Rollback completed"

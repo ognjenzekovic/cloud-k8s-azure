@@ -4,8 +4,8 @@ Project covers basics of microservices using Kubernetes and Azure, along with CI
 
 **Predmet:** Računarstvo u oblaku
 
-**Student:** Ime Prezime
-**Broj indeksa:** XX/XXXX
+**Student:** Ognjen Zeković
+**Broj indeksa:** E241/2025
 
 ## Arhitektura
 

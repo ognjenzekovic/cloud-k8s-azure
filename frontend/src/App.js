@@ -10,7 +10,7 @@ function App() {
     <Router>
       <div className="app">
         <nav className="navbar">
-          <h2>Cloud Orders</h2>
+          <h2>Cloud Orders 2</h2>
           <div className="nav-links">
             <Link to="/">Proizvodi</Link>
             <Link to="/create-order">Nova narudzbina</Link>

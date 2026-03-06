@@ -21,7 +21,10 @@ The key idea: ivoice generation happens **asynchronously**. The user doesn't wai
 ![Creating and order](screenshots/create-order.png)
 
 ### Downloading an invoice
-![Downloading and invoice](screenshots/invoice.png)
+![Downloading and invoice](screenshots/download-invoice.png)
+
+### Generated inovice
+![Generated inovice](screenshots/invoice.png)
 
 ## Architecture
 

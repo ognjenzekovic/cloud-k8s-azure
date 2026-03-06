@@ -21,7 +21,10 @@ The key idea: ivoice generation happens **asynchronously**. The user doesn't wai
 ![Creating and order](screenshots/create-order.png)
 
 ### Downloading an invoice
-![Downloading and invoice](screenshots/invoice.png)
+![Downloading and invoice](screenshots/download-invoice.png)
+
+### Generated inovice
+![Generated inovice](screenshots/invoice.png)
 
 ## Architecture
 
@@ -88,6 +91,14 @@ Every push to 'main' triggers:
 4. **Verify** - runs integration tests against the live endpoint. If they fail, all deployments are automatically rolled back
 
 ## Running locally
+
+.env file
+```
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+
+AZURE_STORAGE_CONN_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;QueueEndpoint=http://azurite:10001/devstoreaccount1;BlobEndpoint=http://azurite:10000/devstoreaccount1
+```
 
 Start the infrastructure:
 ```bash

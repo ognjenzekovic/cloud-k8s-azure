@@ -92,6 +92,14 @@ Every push to 'main' triggers:
 
 ## Running locally
 
+.env file
+```
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+
+AZURE_STORAGE_CONN_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;QueueEndpoint=http://azurite:10001/devstoreaccount1;BlobEndpoint=http://azurite:10000/devstoreaccount1
+```
+
 Start the infrastructure:
 ```bash
 docker-compose up --build
